@@ -1,19 +1,19 @@
 package com.reeshaki.ticTacToe;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 public class ticTacToe {
 
-    final static Logger log = LogManager.getLogger(ticTacToe.class);
+    final static String formatUnderline = "\033[4m";
+    final static String formatReset = "\033[0m";
     static String[][] board = new String[3][3];
-    static int[][] priority = new int[][] {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+    static int[][] priority = new int[][] {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}};
     final static int[] cellIndices = new int[] {0, 1, 2, 0, 1, 2};
+    final static Point[] corners = new Point[] {new Point(0, 0), new Point(0, 2), new Point(2, 0), new Point(2, 2)};
     static boolean gameComplete = false;
 
     public static void main(String[] args) {
@@ -26,25 +26,32 @@ public class ticTacToe {
     }
 
     private static void runAisTurn() {
+        printBoard();
         System.out.println("Computer is 'O'. Populating board now!");
-        int highestPriority = 0;
-        List<Point> highestPriorityCell = new ArrayList<Point>();
+        int highestPriority = -100;
+        List<Point> highestPriorityCells = new ArrayList<Point>();
+        // Iterate through all of the cells and find the cells with the highest priority. The computer will select one
+        // of these cells as its next move.
         for (int i = 0; i < priority.length; i++) {
             for (int j = 0; j < priority.length; j++) {
-                if (priority[i][j] > highestPriority) {
-                    highestPriority = priority[i][j];
-                    highestPriorityCell = new ArrayList<Point>();
-                    highestPriorityCell.add(new Point(i, j));
-                } else if (priority[i][j] == highestPriority) {
-                    highestPriorityCell.add(new Point(i, j));
+                // We only care about the cells that are null. If the cell is already set, then set the priority to 0 as
+                // it can't be overwritten.
+                if (board[i][j] == null) {
+                    if (priority[i][j] > highestPriority) {
+                        highestPriority = priority[i][j];
+                        highestPriorityCells = new ArrayList<Point>();
+                        highestPriorityCells.add(new Point(i, j));
+                    } else if (priority[i][j] == highestPriority) {
+                        highestPriorityCells.add(new Point(i, j));
+                    }
+                } else {
+                    priority[i][j] = 0;
                 }
             }
         }
         Random rand = new Random();
-        Point cellToPopulate;
-        do {
-            cellToPopulate = highestPriorityCell.get(rand.nextInt(highestPriorityCell.size()));
-        } while (!populateBoard(cellToPopulate, "O"));
+        Point cellToPopulate = highestPriorityCells.get(rand.nextInt(highestPriorityCells.size()));
+        populateBoard(cellToPopulate, "O");
     }
 
     private static void runHumansTurn(Scanner scn) {
@@ -54,7 +61,6 @@ public class ticTacToe {
             System.out.print("You are 'X', please input the index of the cell you'd like to play, ex. A1: ");
             point = readUserInputAndSetCellPriority(scn);
         } while (!populateBoard(point, "X"));
-        printBoard();
     }
 
     private static boolean populateBoard(Point point, String TicOrTac) {
@@ -63,7 +69,9 @@ public class ticTacToe {
                     + Character.toString((char) ('1' + point.getY())) + " is not a valid cell. Try again");
             return false;
         } else if (board[point.getX()][point.getY()] != null) {
-            System.out.println("Oops! This position is already taken by: " + board[point.getX()][point.getY()]);
+            System.out.println("Oops! " + Character.toString((char) ('A' + point.getX()))
+                    + Character.toString((char) ('1' + point.getY())) + " is already taken by: "
+                    + board[point.getX()][point.getY()]);
             return false;
         } else {
             board[point.getX()][point.getY()] = TicOrTac;
@@ -79,14 +87,14 @@ public class ticTacToe {
             System.exit(0);
         }
         setPriority(x, y);
-        increasePriorityForCloseWinsAndCheckForWinner(new Point(0, 0), new Point(0, 2));
-        increasePriorityForCloseWinsAndCheckForWinner(new Point(1, 0), new Point(1, 2));
-        increasePriorityForCloseWinsAndCheckForWinner(new Point(2, 0), new Point(2, 2));
-        increasePriorityForCloseWinsAndCheckForWinner(new Point(0, 0), new Point(2, 0));
-        increasePriorityForCloseWinsAndCheckForWinner(new Point(0, 1), new Point(2, 1));
-        increasePriorityForCloseWinsAndCheckForWinner(new Point(0, 2), new Point(2, 2));
-        increasePriorityForCloseWinsAndCheckForWinner(new Point(0, 0), new Point(2, 2));
-        increasePriorityForCloseWinsAndCheckForWinner(new Point(2, 0), new Point(0, 2));
+        increasePriorityForCloseWinsAndCheckForWinnerByRow(new Point(0, 0), new Point(0, 2));
+        increasePriorityForCloseWinsAndCheckForWinnerByRow(new Point(1, 0), new Point(1, 2));
+        increasePriorityForCloseWinsAndCheckForWinnerByRow(new Point(2, 0), new Point(2, 2));
+        increasePriorityForCloseWinsAndCheckForWinnerByRow(new Point(0, 0), new Point(2, 0));
+        increasePriorityForCloseWinsAndCheckForWinnerByRow(new Point(0, 1), new Point(2, 1));
+        increasePriorityForCloseWinsAndCheckForWinnerByRow(new Point(0, 2), new Point(2, 2));
+        increasePriorityForCloseWinsAndCheckForWinnerByRow(new Point(0, 0), new Point(2, 2));
+        increasePriorityForCloseWinsAndCheckForWinnerByRow(new Point(2, 0), new Point(0, 2));
     }
 
     private static boolean isBoardFull() {
@@ -100,58 +108,79 @@ public class ticTacToe {
         return true;
     }
 
-    private static void increasePriorityForCloseWinsAndCheckForWinner(Point point, Point point2) {
+    private static void increasePriorityForCloseWinsAndCheckForWinnerByRow(Point point, Point point2) {
+        HashMap<String, Object> myMap = new HashMap<String, Object>();
         Point pointToPrioritize = null;
         int xFound = 0;
         int oFound = 0;
-        int row = 0, column = 0, priorityIncrement = 0;
+        int row = point.getX(), column = point.getY(), priorityIncrement = 0;
+        myMap.put("xFound", xFound);
+        myMap.put("oFound", oFound);
+        myMap.put("priorityIncrement", priorityIncrement);
+        myMap.put("pointToPrioritize", pointToPrioritize);
         for (int i = 0; i < priority.length; i++) {
             if (point.getX() == point2.getX()) {
                 column = i;
-                row = point.getX();
             } else if (point.getY() == point2.getY()) {
-                column = point.getY();
                 row = i;
             } else {
                 column = i;
-                row = i;
-            }
-            if (board[row][column] == null) {
-                if (pointToPrioritize == null) {
-                    pointToPrioritize = new Point(row, column);
+                // Diagonal going from (0,0) to (2,2)
+                if (point.getX() == point.getY()) {
+                    row = i;
+                } else {
+                    // Diagonal going from (2,0) to (0,2)
+                    row = point.getX();
+                    row -= i;
                 }
             }
-            if ("X".equals(board[row][column])) {
-                if (xFound == 1) {
-                    priorityIncrement = 3;
-                } else if (xFound == 2) {
-                    printBoard();
-                    System.out.println("You WIN!");
-                    System.exit(0);
-                    ;
-                }
-                xFound++;
-            } else if ("O".equals(board[row][column])) {
-                if (oFound == 1) {
-                    priorityIncrement = 4;
-                } else if (oFound == 2) {
-                    printBoard();
-                    System.out.println("Computer WINS!");
-                    System.exit(0);
-                }
-                oFound++;
-            }
+            myMap.put("row", row);
+            myMap.put("column", column);
+            checkForWinnerAndDeterminePriorityIncrement(myMap);
         }
-        if (xFound != 0 && oFound != 0) {
-            priorityIncrement = -3;
-        }
-        if (pointToPrioritize != null && priority[pointToPrioritize.getX()][pointToPrioritize.getY()] > 0) {
-            priority[pointToPrioritize.getX()][pointToPrioritize.getY()] += priorityIncrement;
+        if (myMap.get("pointToPrioritize") != null) {
+            // Both 'X' and 'O' were found in the row, decrease the priority
+            if ((Integer) myMap.get("xFound") != 0 && (Integer) myMap.get("oFound") != 0) {
+                myMap.put("priorityIncrement", -3);
+            }
+            priority[((Point) myMap.get("pointToPrioritize")).getX()][((Point) myMap.get("pointToPrioritize"))
+                    .getY()] += (Integer) myMap.get("priorityIncrement");
         }
     }
 
+    private static void checkForWinnerAndDeterminePriorityIncrement(HashMap<String, Object> myMap) {
+        int xFound = (Integer) myMap.get("xFound"), oFound = (Integer) myMap.get("oFound"),
+                row = (Integer) myMap.get("row"), column = (Integer) myMap.get("column");
+        if (board[row][column] == null) {
+            if ((Point) myMap.get("pointToPrioritize") == null) {
+                myMap.put("pointToPrioritize", new Point(row, column));
+            }
+        } else if ("X".equals(board[row][column])) {
+            // Increase the priority enough to possibly make it the highest priority cell
+            if (xFound == 1) {
+                myMap.put("priorityIncrement", 3);
+            } else if (xFound == 2) {
+                printBoard();
+                System.out.println("You WIN!");
+                System.exit(0);
+            }
+            myMap.put("xFound", ++xFound);
+        } else if ("O".equals(board[row][column])) {
+            // Increase the priority to make it the highest priority cell
+            if (oFound == 1) {
+                myMap.put("priorityIncrement", 4);
+            } else if (oFound == 2) {
+                printBoard();
+                System.out.println("Computer WINS!");
+                System.exit(0);
+            }
+            myMap.put("oFound", ++oFound);
+        }
+
+    }
+
     private static Point readUserInputAndSetCellPriority(Scanner scn) {
-        String cellPointStr = scn.nextLine();
+        String cellPointStr = scn.nextLine().toUpperCase();
         int row = cellPointStr.charAt(0) - 'A';
         int column = cellPointStr.charAt(1) - '1';
         Point point = new Point(row, column);
@@ -173,6 +202,9 @@ public class ticTacToe {
             else if (Math.abs(row - column) == 2) {
                 priority[cellIndices[row + i]][cellIndices[column + 3 - i]] += 1;
             }
+            // If the user picks a corner, set a higher priority for the cells next to it and even higher for the center
+            setPriorityForCornerSelections(row, column);
+
             // Takes care of the column and row cells
             priority[cellIndices[row + i]][cellIndices[column]] += 1;
             priority[cellIndices[row]][cellIndices[column + i]] += 1;
@@ -180,24 +212,76 @@ public class ticTacToe {
 
     }
 
+    private static void setPriorityForCornerSelections(int row, int column) {
+        int neighborRowIncrement = 1;
+        int neighborColumnIncrement = 1;
+        for (Point corner : corners) {
+            if (row == corner.getX() && column == corner.getY()) {
+                if (row == 2) {
+                    neighborRowIncrement = -1;
+                }
+                if (column == 2) {
+                    neighborColumnIncrement = -1;
+                }
+                // If the neighboring cell's priority is set to 0, then this is the first turn. Set priority higher.
+                if (priority[cellIndices[row + neighborRowIncrement]][cellIndices[column]] == 0) {
+                    priority[cellIndices[row + neighborRowIncrement]][cellIndices[column]] += 2;
+                    priority[cellIndices[row]][cellIndices[column + neighborColumnIncrement]] += 2;
+                    // We want the center priority higher as that needs to be the next move for the AI.
+                    priority[cellIndices[1]][cellIndices[1]] += 3;
+                }
+            }
+        }
+
+    }
+
     private static void printBoard() {
         StringBuilder sb = new StringBuilder();
-        for (int x = 0; x < board.length; x++) {
-            for (int y = 0; y < board.length; y++) {
-                if (x != 2 && board[x][y] == null) {
-                    sb.append("\033[4m").append(" ").append("\033[0m");
-                } else if (board[x][y] != null) {
-                    sb.append("\033[4m").append(board[x][y]).append("\033[0m");
-                } else {
-                    sb.append(" ");
+        char rowLabel = 'A';
+        char columnLabel = '1';
+        for (int x = -1; x < board.length; x++) {
+            if (x >= 0) {
+                sb.append(Character.toString(rowLabel++)).append(" ");
+            }
+            for (int y = -1; y < board.length; y++) {
+                if (x == -1) {
+                    if (y == -1) {
+                        // Top left corner is empty due to column and row labels
+                        sb.append("  ");
+                    } else {
+                        sb.append(Character.toString(columnLabel++)).append(" ");
+                    }
                 }
-                if (y != 2) {
-                    sb.append("|");
-                }
+                printRowContents(sb, x, y);
             }
             sb.append(System.lineSeparator());
         }
         System.out.println(sb.toString());
+    }
+
+    private static void printRowContents(StringBuilder sb, int x, int y) {
+     // Print the board
+        if (x >= 0 && y >= 0) {
+            // Set the text format to underline
+            if (x != 2) {
+                sb.append(formatUnderline);
+            }
+
+            if (board[x][y] == null) {
+                sb.append(" ");
+            } else if (board[x][y] != null) {
+                sb.append(board[x][y]);
+            }
+
+            // Reset the text format to default
+            if (x != 2) {
+                sb.append(formatReset);
+            }
+
+            if (y != 2) {
+                sb.append("|");
+            }
+        }
     }
 
     static private class Point {
